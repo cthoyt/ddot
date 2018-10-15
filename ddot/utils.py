@@ -19,6 +19,11 @@ from ndex.networkn import NdexGraph
 import ddot
 import ddot.config
 
+try:
+    import simplejson as json
+except ImportError:
+    import json
+
 def print_time(*s):
     print(' '.join(map(str, s)), datetime.today())
     sys.stdout.flush()
@@ -135,11 +140,8 @@ def bubble_layout_nx(G, xmin=-750, xmax=750, ymin=-750, ymax=750, verbose=False)
        Dictionary mapping nodes to 2D coordinates. pos[node_name] -> (x,y)
 
     """
-    
     from tulip import tlp
-#     from tulip import *
-#     from tulipgui import *
-    
+
     graph = tlp.newGraph()        
     nodes = graph.addNodes(len(G.nodes()))
     nodes_idx = make_index(G.nodes())    
@@ -676,11 +678,6 @@ def load_edgeMatrix(ndex_uuid,
     ndex_pass : str
         NDEx password
 
-    json : module
-
-        JSON module with "loads" function. Default: the simplejson
-        package (must be installed)
-
     Returns
     -------
     X : np.ndarray
@@ -692,11 +689,6 @@ def load_edgeMatrix(ndex_uuid,
         Row names
 
     """
-
-    if json is None:
-        import simplejson
-        json = simplejson
-        
     if ndex is None:
         ndex = nc.Ndex(ndex_server, ndex_user, ndex_pass)
 
