@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(name='ddot',
       version='1.0rc4',
@@ -26,11 +26,17 @@ setup(name='ddot',
           # Specify the Python versions you support here. In particular, ensure
           # that you indicate whether you support Python 2, Python 3 or both.
           'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.6',
-          'Programming Language :: Python :: 3.5'
+          'Programming Language :: Python :: 3.5',
       ],
       keywords='ontology hierarchy',
       packages=['ddot'],
       install_requires=['pandas>=0.20', 'numpy', 'scipy', 'ndex-dev', 'python-igraph', 'networkx==1.11'],
+      extras_require={
+          'tulip': [
+              'tulip-python',
+          ],
+      },
       include_package_data=True,
       zip_safe=False)
