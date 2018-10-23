@@ -1,21 +1,20 @@
 from __future__ import absolute_import, print_function
 
-import sys
 import base64
+import io
+import os
+import sys
 import time
 import traceback
-import os
-import io
-from math import ceil
 from datetime import datetime
-
-import pandas as pd
-import networkx as nx
-import numpy as np
+from math import ceil
 
 import ndex.client as nc
+import networkx as nx
+import numpy as np
+import pandas as pd
 from ndex.networkn import NdexGraph
-    
+
 import ddot
 import ddot.config
 
@@ -24,9 +23,11 @@ try:
 except ImportError:
     import json
 
+
 def print_time(*s):
     print(' '.join(map(str, s)), datetime.today())
     sys.stdout.flush()
+
 
 def invert_dict(dic, sort=True, keymap={}, valmap={}):
     """Inverts a dictionary of the form
@@ -63,6 +64,7 @@ def invert_dict(dic, sort=True, keymap={}, valmap={}):
             dic_inv[k].sort()
 
     return dic_inv
+
 
 def transform_pos(pos, xmin=-250, xmax=250, ymin=-250, ymax=250):
     """Transforms coordinates to fit a bounding box.
@@ -103,9 +105,10 @@ def transform_pos(pos, xmin=-250, xmax=250, ymin=-250, ymax=250):
 
     transform_x = make_transform([x for x, y in pos.values()])
     transform_y = make_transform([y for x, y in pos.values()])
-    pos = {g : (transform_x(x), transform_y(y)) for g, (x, y) in pos.items()}
+    pos = {g: (transform_x(x), transform_y(y)) for g, (x, y) in pos.items()}
 
     return pos
+
 
 def bubble_layout_nx(G, xmin=-750, xmax=750, ymin=-750, ymax=750, verbose=False):
     """Bubble-tree Layout using the Tulip library.
@@ -140,32 +143,38 @@ def bubble_layout_nx(G, xmin=-750, xmax=750, ymin=-750, ymax=750, verbose=False)
        Dictionary mapping nodes to 2D coordinates. pos[node_name] -> (x,y)
 
     """
-    from tulip import tlp
+    try:
+        from tulip import tlp
+    except ImportError:
+        return nx.circular_layout(G)
 
-    graph = tlp.newGraph()        
+    graph = tlp.newGraph()
     nodes = graph.addNodes(len(G.nodes()))
-    nodes_idx = make_index(G.nodes())    
+    nodes_idx = make_index(G.nodes())
     for x, y in G.edges():
         graph.addEdge(nodes[nodes_idx[x]], nodes[nodes_idx[y]])
     # Apply the 'Bubble Tree' graph layout plugin from Tulip
     graph.applyLayoutAlgorithm('Bubble Tree')
-        
+
     viewLayout = graph.getLayoutProperty("viewLayout")
-    pos = {g : (viewLayout[i].x(), viewLayout[i].y()) for i, g in zip(nodes, G.nodes())}
+    pos = {g: (viewLayout[i].x(), viewLayout[i].y()) for i, g in zip(nodes, G.nodes())}
     pos = transform_pos(pos, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     return pos
+
 
 def split_indices(n, k):
     try:
         tmp = iter(n)
         indices = n
     except TypeError:
-        assert type(n)==type(int(1))
+        assert type(n) == type(int(1))
         indices = list(range(n))
 
     chunk_size = int(ceil(float(len(indices)) / k))
 
-    return [(chunk_size * a, min(chunk_size * (a+1), len(indices))) for a in range(int(ceil(float(len(indices)) / chunk_size)))]
+    return [(chunk_size * a, min(chunk_size * (a + 1), len(indices))) for a in
+            range(int(ceil(float(len(indices)) / chunk_size)))]
+
 
 def split_indices_chunk(n, k):
     try:
@@ -174,18 +183,21 @@ def split_indices_chunk(n, k):
     except TypeError:
         assert isinstance(n, int)
 
-    return [(k*i, min(k*(i+1), n)) for i in range(int(ceil(float(n) / k)))]
+    return [(k * i, min(k * (i + 1), n)) for i in range(int(ceil(float(n) / k)))]
+
 
 def make_index(it):
     """Create a dictionary mapping elements of an iterable to the index
     position of that element
 
     """
-    return {b : a for a, b in enumerate(it)}
+    return {b: a for a, b in enumerate(it)}
+
 
 def time_print(*s):
     print(' '.join(map(str, s)), datetime.today())
     sys.stdout.flush()
+
 
 def pivot_square(df, index, columns, values, fill_value=0):
     """Convert a dataframe into a square compact representation.
@@ -202,7 +214,7 @@ def pivot_square(df, index, columns, values, fill_value=0):
 
     """
 
-    df = df.pivot(index=index, columns=columns, values=values)    
+    df = df.pivot(index=index, columns=columns, values=values)
     index = df.index.union(df.columns)
     df = df.reindex(index=index, columns=index, copy=False)
 
@@ -212,9 +224,10 @@ def pivot_square(df, index, columns, values, fill_value=0):
     tmp = np.minimum(tmp, tmp.T)
     tmp[np.isinf(tmp)] = fill_value
 
-    df.iloc[:,:] = tmp
+    df.iloc[:, :] = tmp
 
     return df
+
 
 def melt_square(df, columns=['Gene1', 'Gene2'], similarity='similarity', empty_value=0, upper_triangle=True):
     """Melts square dataframe into sparse representation.
@@ -244,21 +257,21 @@ def melt_square(df, columns=['Gene1', 'Gene2'], similarity='similarity', empty_v
         third column indicates the edge value
 
     """
-
     assert df.shape[0] == df.shape[1]
-    
+
     if upper_triangle:
         assert np.all(df.index.values == df.columns.values)
         df = df.copy()
         tmp = df.values
         tmp[np.tril_indices(tmp.shape[0], k=0)] = np.nan
-        df.iloc[:,:] = tmp
-    
+        df.iloc[:, :] = tmp
+
     tmp = df.stack()
     tmp.dropna(inplace=True)
     tmp.index.rename(columns, inplace=True)
     tmp.rename(similarity, inplace=True)
     return tmp.reset_index()
+
 
 # def get_gene_name_converter(genes, scopes='symbol', fields='entrezgene', species='human', target='gene'):
 #     """Query mygene.info to get a dictionary mapping gene names in the ID
@@ -271,15 +284,15 @@ def melt_square(df, columns=['Gene1', 'Gene2'], similarity='similarity', empty_v
 
 #     if hasattr(genes, '__iter__') and not isinstance(genes, (str, unicode)):
 #         genes = ','.join(genes)
-        
+
 #     import requests
 #     r = requests.post('http://mygene.info/v3/query',
 #                       data={'q': genes,
 #                             'scopes': scopes,
 #                             'fields': fields,
 #                             'species': species})
-    
-    
+
+
 #     def parse_field(x):
 #         if isinstance(x, dict):
 #             return [unicode(x[target])]
@@ -287,7 +300,7 @@ def melt_square(df, columns=['Gene1', 'Gene2'], similarity='similarity', empty_v
 #             return [unicode(y[target]) for y in x]
 #         else:
 #             return unicode(x)
-    
+
 #     dic = {x['query'] : parse_field(x[fields]) for x in r.json() if x.has_key(fields)}
 #     return dic
 
@@ -326,7 +339,7 @@ def update_nx_with_alignment(G,
         else:
             node_name = node_idx
 
-        if node_attr['Gene_or_Term']=='Term' and node_name in alignment.index:
+        if node_attr['Gene_or_Term'] == 'Term' and node_name in alignment.index:
             row = alignment.loc[node_name, :]
             if term_descriptions is not None:
                 descr = term_descriptions[row['Term']]
@@ -339,7 +352,8 @@ def update_nx_with_alignment(G,
             node_attr['Aligned_FDR'] = row['FDR']
 
     return G
-    
+
+
 ###################################################
 # NetworkX, NdexGraph, and NDEx format converters #
 ###################################################
@@ -355,7 +369,7 @@ def set_node_attributes_from_pandas(G, node_attr):
     node_attr : pandas.DataFrame
 
     """
-    
+
     G_nodes = set(G.nodes())
     node_attr = node_attr.loc[[x for x in node_attr.index if x in G_nodes], :]
     if node_attr is not None:
@@ -369,6 +383,7 @@ def set_node_attributes_from_pandas(G, node_attr):
                 except:
                     pass
                 G.node[n][feature_name] = v
+
 
 def set_edge_attributes_from_pandas(G, edge_attr):
     """Modify edge attributes according to a pandas.DataFrame.
@@ -386,12 +401,14 @@ def set_edge_attributes_from_pandas(G, edge_attr):
     edge_attr = edge_attr.loc[[x for x in edge_attr.index if x in G_edges], :]
     if edge_attr is not None:
         for feature_name, feature in edge_attr.iteritems():
-            for (e1,e2), v in feature.dropna().iteritems():
+            for (e1, e2), v in feature.dropna().iteritems():
                 try:
                     v = v.item()
                 except:
                     pass
                 G[e1][e2][feature_name] = v
+
+
 #                G.edge[(e1,e2)][feature_name] = v
 
 def nx_nodes_to_pandas(G, attr_list=None):
@@ -414,8 +431,9 @@ def nx_nodes_to_pandas(G, attr_list=None):
     if attr_list is None:
         attr_list = list(set([a for d in G.nodes(data=True)
                               for a in d[1].keys()]))
-    return pd.concat([pd.Series(nx.get_node_attributes(G,a), name=a) for a in attr_list],
+    return pd.concat([pd.Series(nx.get_node_attributes(G, a), name=a) for a in attr_list],
                      axis=1)
+
 
 def nx_edges_to_pandas(G, attr_list=None):
     """Create pandas.DataFrame of edge attributes of a NetworkX graph.
@@ -439,28 +457,29 @@ def nx_edges_to_pandas(G, attr_list=None):
     """
 
     if attr_list is None:
-        attr_list = list(set([a for d in G.edges(data=True) 
+        attr_list = list(set([a for d in G.edges(data=True)
                               for a in d[2].keys()]))
 
     # print 'attr_list:', attr_list
     # for a in attr_list:
     #     print 'attr:', a
     #     nx.get_edge_attributes(G,a)
-    
+
     if len(attr_list) > 0:
-        df = pd.concat([pd.Series(nx.get_edge_attributes(G,a), name=a) for a in attr_list],
-                         axis=1)
+        df = pd.concat([pd.Series(nx.get_edge_attributes(G, a), name=a) for a in attr_list],
+                       axis=1)
     else:
         df = pd.DataFrame(index=pd.MultiIndex.from_tuples(G.edges()))
 
-    if df.index.nlevels==2:
+    if df.index.nlevels == 2:
         df.index.rename(['Node1', 'Node2'], inplace=True)
-    elif df.index.nlevels==3:
+    elif df.index.nlevels == 3:
         df.index.rename(['Node1', 'Node2', 'EdgeID'], inplace=True)
     else:
         raise Exception('Invalid number of levels: %s' % df.index.nlevels)
 
-    return df    
+    return df
+
 
 def ig_nodes_to_pandas(G, attr_list=None):
     """Create pandas.DataFrame of node attributes of a igraph.Graph object.
@@ -489,9 +508,10 @@ def ig_nodes_to_pandas(G, attr_list=None):
     df = pd.DataFrame(index=G.vs['name'])
     for attr in attr_list:
         df[attr] = G.vs[attr]
-        
+
     df.dropna(axis=0, how='all', inplace=True)
     return df
+
 
 def ig_edges_to_pandas(G, attr_list=None):
     """Create pandas.DataFrame of edge attributes of a igraph Graph object.
@@ -523,8 +543,9 @@ def ig_edges_to_pandas(G, attr_list=None):
         df[attr] = G.es[attr]
 
     df.dropna(axis=0, how='all', inplace=True)
-    
-    return df    
+
+    return df
+
 
 def nx_to_NdexGraph(G_nx, discard_null=True):
     """Converts a NetworkX into a NdexGraph object.
@@ -545,29 +566,30 @@ def nx_to_NdexGraph(G_nx, discard_null=True):
     G.max_edge_id = 0
     for node_name, node_attr in G_nx.nodes(data=True):
         if discard_null:
-            node_attr = {k:v for k,v in node_attr.items() if not pd.isnull(v)}
+            node_attr = {k: v for k, v in node_attr.items() if not pd.isnull(v)}
 
         if 'name' in node_attr:
-            #G.add_node(node_id, node_attr)
+            # G.add_node(node_id, node_attr)
             G.add_node(node_id, **node_attr)
         else:
-            #G.add_node(node_id, node_attr, name=node_name)
+            # G.add_node(node_id, node_attr, name=node_name)
             G.add_node(node_id, name=node_name, **node_attr)
         node_dict[node_name] = node_id
         node_id += 1
     for s, t, edge_attr in G_nx.edges(data=True):
         if discard_null:
-            edge_attr = {k:v for k,v in edge_attr.items() if not pd.isnull(v)}
+            edge_attr = {k: v for k, v in edge_attr.items() if not pd.isnull(v)}
 
         G.add_edge(node_dict[s], node_dict[t], G.max_edge_id, edge_attr)
         G.max_edge_id += 1
 
     if hasattr(G_nx, 'pos'):
-        G.pos = {node_dict[a] : b for a, b in G_nx.pos.items()}
+        G.pos = {node_dict[a]: b for a, b in G_nx.pos.items()}
         # G.subnetwork_id = 1
         # G.view_id = 1
 
     return G
+
 
 def NdexGraph_to_nx(G):
     """Converts a NetworkX into a NdexGraph object.
@@ -583,6 +605,7 @@ def NdexGraph_to_nx(G):
     """
 
     return nx.DiGraph(nx.relabel_nodes(G, nx.get_node_attributes(G, 'name'), copy=True))
+
 
 def parse_ndex_uuid(ndex_url):
     """Extracts the NDEx UUID from a URL
@@ -600,6 +623,7 @@ def parse_ndex_uuid(ndex_url):
     """
     return ndex_url.split('v2/network/')[1]
 
+
 def parse_ndex_server(ndex_url):
     tmp = ndex_url.split('//')
     if len(tmp) == 2:
@@ -609,7 +633,8 @@ def parse_ndex_server(ndex_url):
         # e.g. 'dev2.ndexbio.org/v2/network/8bfa8318-55ed-11e7-a2e2-0660b7976219'
         return tmp[0].split('v2/network/')[0]
     elif len(tmp) == 0 or len(tmp) > 2:
-        raise Exception()        
+        raise Exception()
+
 
 def create_edgeMatrix(X, X_cols, X_rows, verbose=True, G=None):
     """Converts an NumPy array into a NdexGraph with a special CX aspect
@@ -633,7 +658,7 @@ def create_edgeMatrix(X, X_cols, X_rows, verbose=True, G=None):
 
     if not X.flags['C_CONTIGUOUS']:
         X = np.ascontiguousarray(X)
-    
+
     # Use base64 encoding of binary to text. More efficient than
     # pickle(*, protocol=0)
     start = time.time()
@@ -647,12 +672,15 @@ def create_edgeMatrix(X, X_cols, X_rows, verbose=True, G=None):
     if G is None:
         G = NdexGraph()
     G.unclassified_cx.append(
-        {'matrix': serialized,
-         'matrix_cols' : X_cols,
-         'matrix_rows' : X_rows,
-         'matrix_dtype' : X.dtype.name})
-    
+        {
+            'matrix': serialized,
+            'matrix_cols': X_cols,
+            'matrix_rows': X_rows,
+            'matrix_dtype': X.dtype.name
+        })
+
     return G
+
 
 def load_edgeMatrix(ndex_uuid,
                     ndex_server,
@@ -730,8 +758,9 @@ def load_edgeMatrix(ndex_uuid,
 
     if verbose:
         print('loop time (sec):', time.time() - start_loop)
-    
+
     return X, rows, cols
+
 
 def sim_matrix_to_NdexGraph(sim, names, similarity, output_fmt, node_attr=None):
     """Convert similarity matrix into NdexGraph object
@@ -769,11 +798,11 @@ def sim_matrix_to_NdexGraph(sim, names, similarity, output_fmt, node_attr=None):
 
     elif output_fmt == 'cx':
         # Keep only upper-right triangle
-        sim[np.tril_indices(sim.shape[0],k=0)] = 0
+        sim[np.tril_indices(sim.shape[0], k=0)] = 0
 
         # Create NetworkX graph
         nnz = sim.nonzero()
-        ebunch = [(a,b,float(c)) for (a,b),c in zip(zip(*nnz), sim[nnz])]
+        ebunch = [(a, b, float(c)) for (a, b), c in zip(zip(*nnz), sim[nnz])]
         G = nx.DiGraph()
         G.add_weighted_edges_from(ebunch, weight=similarity)
         nx.relabel_nodes(G, dict(enumerate(names)), copy=False)
@@ -784,6 +813,7 @@ def sim_matrix_to_NdexGraph(sim, names, similarity, output_fmt, node_attr=None):
         return nx_to_NdexGraph(G)
     else:
         raise Exception('Unsupported output_fmt: %s' % output_fmt)
+
 
 def ndex_to_sim_matrix(ndex_uuid,
                        ndex_server=None,
@@ -841,21 +871,21 @@ def ndex_to_sim_matrix(ndex_uuid,
     if 'http' in ndex_uuid:
         ndex_server = ndex_uuid.split('v2/network/')[0]
         ndex_uuid = parse_ndex_uuid(ndex_uuid)
-    
-    if input_fmt=='cx':
+
+    if input_fmt == 'cx':
         # Read graph using NDEx client
         G = NdexGraph_to_nx(
-              NdexGraph(
-                  server=ndex_server, 
-                  username=ndex_user,
-                  password=ndex_pass,
-                  uuid=ndex_uuid))
+            NdexGraph(
+                server=ndex_server,
+                username=ndex_user,
+                password=ndex_pass,
+                uuid=ndex_uuid))
 
         # Create a DataFrame of similarity scores
         G_df = nx_edges_to_pandas(G)
         G_df.index.rename(['Node1', 'Node2'], inplace=True)
         G_df.reset_index(inplace=True)
-        
+
         if similarity is None:
             G_df['similarity'] = 1.0
         else:
@@ -863,15 +893,15 @@ def ndex_to_sim_matrix(ndex_uuid,
 
         nodes_attr = nx_nodes_to_pandas(G)
 
-        if output_fmt=='matrix':
+        if output_fmt == 'matrix':
             G_sq = pivot_square(G_df, 'Node1', 'Node2', similarity)
             return G_sq.values, G_sq.index.values
-        elif output_fmt=='sparse':
+        elif output_fmt == 'sparse':
             return G_df, nodes_attr
         else:
             raise Exception('Unsupported output_fmt: %s' % output_fmt)
 
-    elif input_fmt=='cx_matrix':
+    elif input_fmt == 'cx_matrix':
         sim, sim_names, sim_names_col = load_edgeMatrix(
             ndex_uuid,
             ndex_server,
@@ -885,16 +915,17 @@ def ndex_to_sim_matrix(ndex_uuid,
             sim = sim[idx, :][:, idx]
             sim_names = sim_names[idx]
 
-        if output_fmt=='matrix':
+        if output_fmt == 'matrix':
             return sim, sim_names
-        elif output_fmt=='sparse':
+        elif output_fmt == 'sparse':
             G_sq = pd.DataFrame(sim, index=sim_names, columns=sim_names)
-            G_df = melt_square(G_sq)            
+            G_df = melt_square(G_sq)
             return G_df, None
         else:
             raise Exception('Unsupported output_fmt: %s' % output_fmt)
     else:
         raise Exception('Unsupported input_fmt: %s' % input_fmt)
+
 
 def expand_seed(seed,
                 sim,
@@ -958,19 +989,19 @@ def expand_seed(seed,
     assert sim.shape[0] == sim.shape[1] and sim.shape[0] == len(sim_names)
 
     sim_names = np.array(sim_names)
-    
+
     index = make_index(sim_names)
     seed_idx = np.array([index[g] for g in seed])
     non_seed_idx = np.setdiff1d(np.arange(len(sim_names)), seed_idx)
-        
+
     # if seed_idx.size == 1:
     #     seed_idx = np.array([seed_idx])
-#        sim_slice = np.array([sim_slice])
+    #        sim_slice = np.array([sim_slice])
 
     # Calculate a similarity score between each gene and the seed
     # set of genes
-    sim_slice = sim[seed_idx, :]        
-    if agg=='mean':
+    sim_slice = sim[seed_idx, :]
+    if agg == 'mean':
         # Average similarity to the seed set
         # Don't include self in the average.
         sim_2_seed = sim_slice.sum(0)
@@ -981,17 +1012,17 @@ def expand_seed(seed,
         ## Just take a simple average including self.
         ## This method has the problem is that it's not clear what to set the similarity to self
         # sim_2_seed = sim_slice.mean(0)
-        
+
         # print sim_2_seed.size, np.diagonal(sim_slice).size, sim_slice.shape        
         # sim_2_seed -= np.diagonal(sim_slice)
         # sim_2_seed = sim_2_seed / float(sim_2_seed.shape[0] - 1)
-    elif agg=='min':
+    elif agg == 'min':
         # The minimum similarity to any gene in the seed set
         sim_2_seed = sim_slice.min(0)
-    elif agg=='max':
+    elif agg == 'max':
         # The maximum similarity to any gene in the seed set
         sim_2_seed = sim_slice.max(0)
-    elif agg=='perc':
+    elif agg == 'perc':
         # The <agg_perc> percentile of similarities to the seed set.
         # For example, if a gene has similarities of (0, 0.2, 0.4,
         # 0.6, 0.8) to five seed genes, then the 10% similarity is 0.2
@@ -1011,7 +1042,7 @@ def expand_seed(seed,
     if expand_idx.size > 0:
         # Maximum limit on the number of returned genes
         if expand_size is not None:
-            expand_idx = expand_idx[ : expand_size]
+            expand_idx = expand_idx[: expand_size]
 
         # Filter based on a percentile of similarities between all genes and the seed set
         if filter_perc is not None:
@@ -1020,11 +1051,11 @@ def expand_seed(seed,
         # Filter based on a percentile of similarities between seed set to itself
         if seed_perc is not None:
             min_sim = max(min_sim, np.percentile(sim_2_seed[seed_idx], 100 * seed_perc))
-            
+
         if verbose: print('min_sim:', min_sim)
 
         expand_idx = expand_idx[sim_2_seed[expand_idx] >= min_sim]
-        
+
     expand = np.array(sim_names)[expand_idx]
     expand_sim = sim_2_seed[expand_idx]
 
@@ -1051,19 +1082,20 @@ def expand_seed(seed,
                              ax=ax,
                              axlabel='Similarity to seed set', label='Probability Density')
             # plt.show(fig)
-            
+
             try:
                 figure.savefig(figure)
             except:
                 pass
 
-            #plt.close(fig)
+            # plt.close(fig)
         else:
             fig = None
     except:
         fig = None
 
     return expand, expand_idx, sim_2_seed, fig
+
 
 def make_seed_ontology(sim,
                        sim_names,
@@ -1114,7 +1146,7 @@ def make_seed_ontology(sim,
 
     assert 'seed' in expand_kwargs
     seed = expand_kwargs['seed']
-    
+
     ################
     # Expand genes #
     ################
@@ -1122,19 +1154,21 @@ def make_seed_ontology(sim,
         print('----------------')
         print('Expanding genes')
         print('----------------')
-    
-    kwargs = {'sim': sim,
-              'sim_names': sim_names}
+
+    kwargs = {
+        'sim': sim,
+        'sim_names': sim_names
+    }
     kwargs.update(expand_kwargs)
-        
+
     expand, expand_idx, sim_2_seed, fig = expand_seed(**kwargs)
-    expand_results = {'expand' : expand, 'sim_2_seed' : sim_2_seed, 'fig' : fig}    
+    expand_results = {'expand': expand, 'sim_2_seed': sim_2_seed, 'fig': fig}
     expand = list(expand)
 
     if verbose:
         print('Seed genes:', len(seed))
         print('Expand genes:', len(expand))
-        
+
     ##################
     # Build Ontology #
     ##################
@@ -1142,7 +1176,7 @@ def make_seed_ontology(sim,
         print('-----------------')
         print('Building ontology')
         print('-----------------')
-    
+
     # Slice the similarity matrix over the expanded gene set and
     # convert to a square dataframe
     df_sq = pd.DataFrame(sim[expand_idx, :][:, expand_idx], index=expand, columns=expand)
@@ -1161,7 +1195,7 @@ def make_seed_ontology(sim,
             print('------------------')
             print('Aligning Ontology')
             print('------------------')
-                
+
         alignment = ont.align(**align_kwargs)
         if verbose:
             print('Alignment: %s alignment matches' % alignment.shape[0])
@@ -1169,50 +1203,50 @@ def make_seed_ontology(sim,
     #############################
     # Set other node attributes #
     #############################
-    
+
     # Annotate which genes were part of the seed set
     seed_set = set(seed)
-    seed_attr = pd.DataFrame({'Seed' : [g in seed_set for g in ont.genes]}, index=ont.genes)
+    seed_attr = pd.DataFrame({'Seed': [g in seed_set for g in ont.genes]}, index=ont.genes)
     ont.update_node_attr(seed_attr)
 
     # Annotate the data similarity to the seed set
     tmp = make_index(sim_names)
-    sim_attr = pd.DataFrame({'Similarity_2_Seed' : [sim_2_seed[tmp[g]] for g in ont.genes]}, index=ont.genes)
-    ont.update_node_attr(sim_attr)    
+    sim_attr = pd.DataFrame({'Similarity_2_Seed': [sim_2_seed[tmp[g]] for g in ont.genes]}, index=ont.genes)
+    ont.update_node_attr(sim_attr)
 
     # Annotate user-specified node attributes
     if node_attr is not None:
         ont.update_node_attr(node_attr)
 
     # Color seed genes as green (hex #6ACC65)
-    fill_attr = pd.DataFrame({'Vis:Fill Color' : '#6ACC65'}, index=seed)
-    ont.update_node_attr(fill_attr)        
+    fill_attr = pd.DataFrame({'Vis:Fill Color': '#6ACC65'}, index=seed)
+    ont.update_node_attr(fill_attr)
 
     # Color terms according to the exactness of alignment
     if 'Aligned_Similarity' in ont.node_attr.columns:
         fill_attr = ont.node_attr['Aligned_Similarity'].dropna().map(color_gradient)
-        fill_attr = fill_attr.to_frame().rename(columns={'Aligned_Similarity' : 'Vis:Fill Color'})
+        fill_attr = fill_attr.to_frame().rename(columns={'Aligned_Similarity': 'Vis:Fill Color'})
         ont.update_node_attr(fill_attr)
 
     ##################
     # Upload to NDEx #
     ##################
-        
+
     if ndex:
         if verbose:
             print('--------------------------')
             print('Uploading Ontology to NDEx')
-            print('--------------------------')           
-        
+            print('--------------------------')
+
         if 'network' not in ndex_kwargs:
             ndex_kwargs['network'] = df
             ndex_kwargs['features'] = ['similarity']
             ndex_kwargs['main_feature'] = 'similarity'
 
         description = (
-            'Data-driven ontology created by the function ddot.make_seed_ontology()'
-            'in the DDOT Python package (https://github.com/michaelkyu/ontology)'
-            '(parameters: %s' % ', '.join(['%s=%s' % (k,v) for k,v in build_kwargs.items()])
+                'Data-driven ontology created by the function ddot.make_seed_ontology()'
+                'in the DDOT Python package (https://github.com/michaelkyu/ontology)'
+                '(parameters: %s' % ', '.join(['%s=%s' % (k, v) for k, v in build_kwargs.items()])
         )
 
         ont_url, ont_ndexgraph = ont.to_ndex(
@@ -1225,6 +1259,7 @@ def make_seed_ontology(sim,
 
     return ont, ont_url, ont_ndexgraph, expand_results
 
+
 def make_network_public(uuid,
                         ndex_server,
                         ndex_user,
@@ -1232,9 +1267,9 @@ def make_network_public(uuid,
                         timeout=60,
                         error=False):
     ndex = nc.Ndex(ndex_server, ndex_user, ndex_pass)
-            
+
     sleep_time = 0.25
-    
+
     start = time.time()
     while True:
         if time.time() - start > timeout:
@@ -1258,16 +1293,16 @@ def ig_unfold_tree_with_attr(g, sources, mode):
     attributes.
 
     """
-    
+
     g_unfold, g_map = g.unfold_tree(sources, mode=mode)
-    
+
     g_eids = g.get_eids([(g_map[e.source], g_map[e.target]) for e in g_unfold.es])
     for attr in g.edge_attributes():
         g_unfold.es[attr] = g.es[g_eids][attr]
-        
+
     for attr in g.vertex_attributes():
         g_unfold.vs[attr] = g.vs[g_map][attr]
-                                        
+
     return g_unfold
 
 
@@ -1303,16 +1338,16 @@ def gridify(parents, pos, G):
         Modifies <pos> inplace
 
     """
-    
+
     for v in parents:
         x_center, y_center = pos[v]
         children = list(G.predecessors(v))
         if len(children) <= 1:
             continue
-    
+
         # Estimate radius by averaging the distance to the children
-        radius = np.mean([np.sqrt((pos[c][0] - x_center)**2 + (pos[c][1] - y_center)**2) for c in children])
-        
+        radius = np.mean([np.sqrt((pos[c][0] - x_center) ** 2 + (pos[c][1] - y_center) ** 2) for c in children])
+
         # Width of the the square inscribing the circle is sqrt(2) *
         # radius
         width = np.sqrt(2) * radius
@@ -1330,19 +1365,21 @@ def gridify(parents, pos, G):
         # the outside of the circle to the center's parent
         p = list(G.successors(v))[0]
         x_parent, y_parent = pos[p]
-        distance = np.sqrt((x_parent - x_center)**2 + (y_parent - y_center)**2)
-        alpha = (2/3.) * (distance - radius) / distance
-        
+        distance = np.sqrt((x_parent - x_center) ** 2 + (y_parent - y_center) ** 2)
+        alpha = (2 / 3.) * (distance - radius) / distance
+
         pos[v] = (x_center * (1 - alpha) + x_parent * alpha,
                   y_center * (1 - alpha) + y_parent * alpha)
-        
+
+
 def nx_set_tree_edges(G, tree_edges):
     nx.set_edge_attributes(
         G,
-        values={(s,t) : 'Tree' if ((s,t) in tree_edges) else 'Not_Tree'
-         for s, t in G.edges(data=False)},
+        values={(s, t): 'Tree' if ((s, t) in tree_edges) else 'Not_Tree'
+                for s, t in G.edges(data=False)},
         name='Is_Tree_Edge'
     )
+
 
 def color_gradient(ratio, min_col='#FFFFFF', max_col='#D65F5F', output_hex=True):
     """Calculate a proportional mix between two colors.
@@ -1350,13 +1387,12 @@ def color_gradient(ratio, min_col='#FFFFFF', max_col='#D65F5F', output_hex=True)
     """
 
     min_col_hex = min_col.lstrip('#')
-    min_col_rgb = tuple(int(min_col_hex[i:i+2], 16) for i in (0, 2 ,4))
+    min_col_rgb = tuple(int(min_col_hex[i:i + 2], 16) for i in (0, 2, 4))
     max_col_hex = max_col.lstrip('#')
-    max_col_rgb = tuple(int(max_col_hex[i:i+2], 16) for i in (0, 2 ,4))
+    max_col_rgb = tuple(int(max_col_hex[i:i + 2], 16) for i in (0, 2, 4))
 
-    mix_col_rgb = [int(ratio*x + (1-ratio)*y) for x, y in zip(max_col_rgb, min_col_rgb)]
+    mix_col_rgb = [int(ratio * x + (1 - ratio) * y) for x, y in zip(max_col_rgb, min_col_rgb)]
     if output_hex:
-        return('#%02x%02x%02x' % tuple(mix_col_rgb)).upper()
+        return ('#%02x%02x%02x' % tuple(mix_col_rgb)).upper()
     else:
         return mix_col_rgb
-
