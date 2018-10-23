@@ -32,8 +32,20 @@ class TestDdot(unittest.TestCase):
     def test_from_sim(self):
         """Test that the run_clixo function can run."""
         sim, genes = self.ont.flatten()
-        sim = pd.DataFrame(sim)
-        Ontology.run_clixo(sim, 0.0, 1.0, square=True, square_names=genes)
+
+        genes = list(genes)
+        print(genes)
+
+        sim = pd.DataFrame(sim, columns=genes, index=genes)
+
+        ddo = Ontology.run_clixo(
+            sim,
+            'test_df_output.txt',
+            'test_clixo_output.txt',
+            square=True,
+            square_names=genes,
+        )
+        print('ddo:\n', ddo)
 
 
 if __name__ == '__main__':
