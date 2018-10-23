@@ -106,3 +106,4 @@ ddot/mhk7-clixo_0.3-cec3674/clixo
 ddot/alignOntology/alignOntology
 ddot/alignOntology/calculateFDRsForAlignment
 ddot/alignOntology/collapseRedundantNodes
+ddot/alignOntology/ontologyTermStats
