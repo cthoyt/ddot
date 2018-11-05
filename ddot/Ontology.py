@@ -3473,18 +3473,25 @@ class Ontology(object):
             )
 
             if node_alias in ont.node_attr.columns:
-                term_2_uuid = {s: term_2_uuid[orig_2_new[t][0]] for t in orig_2_new for s in orig_2_new[t] if
-                               orig_2_new[t][0] in term_2_uuid}
+                term_2_uuid = {
+                    s: term_2_uuid[orig_2_new[t][0]]
+                    for t in orig_2_new
+                    for s in orig_2_new[t]
+                    if orig_2_new[t][0] in term_2_uuid
+                }
         elif term_2_uuid is None:
             term_2_uuid = {}
 
-        if verbose: print('Creating NdexGraph')
+        if verbose:
+            print('Creating NdexGraph')
+
         G = ont.to_NdexGraph(
             name=name,
             description=description,
             term_2_uuid=term_2_uuid,
             layout=layout,
-            style=style)
+            style=style,
+        )
 
         if visible_term_attr is not None:
             df = ddot.utils.nx_nodes_to_pandas(G, visible_term_attr)
