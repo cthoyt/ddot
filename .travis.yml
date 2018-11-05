@@ -4,7 +4,7 @@ language: python
 python:
 - 3.6
 install:
-  - sh -c "cd ddot/mhk7-clixo_0.3-cec3674/ && make clean && make all"
+  - sh -c "cd ddot/mhk7-clixo_0.3-cec3674/ && make all"
   - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'
 script:
   - tox -e py
