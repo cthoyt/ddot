@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""Tests for DDOT."""
+
 import unittest
+import warnings
 
 import pandas as pd
 
 from ddot import Ontology
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 # Connections from child terms to parent terms
 hierarchy = [('S3', 'S1'),
@@ -42,6 +49,7 @@ class TestDdot(unittest.TestCase):
             sim,
             'test_df_output.txt',
             'test_clixo_output.txt',
+            'test_output.txt',
             square=True,
             square_names=genes,
         )

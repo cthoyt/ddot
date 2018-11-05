@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 top_level = os.path.dirname(os.path.abspath(inspect.getfile(ddot)))
 clixo_cmd = os.path.join(top_level, 'mhk7-clixo_0.3-cec3674', 'clixo')
 
-assert os.path.exists(clixo_cmd), 'Can not find clixo command at {}'.format(clixo_cmd)
+assert os.path.exists(clixo_cmd), 'Can not find clixo binary at {}'.format(clixo_cmd)
 
 
 def _collapse_node(g,
@@ -3212,6 +3212,7 @@ class Ontology(object):
                   df,
                   df_output_path,
                   clixo_output_path,
+                  output_log_path,
                   *,
                   alpha=0.0,
                   beta=1.0,
@@ -3219,7 +3220,6 @@ class Ontology(object):
                   timeout=100000000,
                   square=False,
                   square_names=None,
-                  output_log_path=None,
                   verbose=False):
         """Runs the CLIXO algorithm and returns the result as an Ontology object.
 
@@ -3285,15 +3285,13 @@ class Ontology(object):
 
         df.to_csv(df_output_path, sep='\t', header=False, index=False)
 
-        cmd = "{clixo_cmd} {df_output_path} {alpha} {beta}".format(
+        cmd = "{clixo_cmd} {df_output_path} {alpha} {beta} | tee {output_log_path}".format(
             clixo_cmd=clixo_cmd,
             df_output_path=df_output_path,
             alpha=alpha,
             beta=beta,
+            output_log_path=output_log_path,
         )
-
-        if output_log_path is not None:
-            cmd += '| tee {output_log_path}'.format(output_log_path=output_log_path)
 
         p = Popen(cmd, shell=True, stdout=PIPE, stderr=STDOUT, bufsize=1)
 
