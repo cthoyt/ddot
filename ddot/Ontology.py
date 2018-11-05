@@ -1500,6 +1500,9 @@ class Ontology(object):
             nx.set_node_attributes(G, values={n: x for n, (x, y) in G.pos.items()}, name='x_pos')
             nx.set_node_attributes(G, values={n: y for n, (x, y) in G.pos.items()}, name='y_pos')
 
+        return G
+
+
     @classmethod
     def from_table(cls,
                    table,
