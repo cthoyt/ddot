@@ -8,7 +8,7 @@ install:
   - sh -c "cd ddot/mhk7-clixo_0.3-cec3674/ && make all"
   # Build the C++ code for alignOntology
   - sh -c "cd ddot/alignOntology/ && make all"
-  - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov; else pip install tox; fi'
+  - sh -c 'if [ "$TOXENV" = "py" ]; then pip install tox codecov coverage; else pip install tox; fi'
 script:
   - tox -e py
 after_success:
