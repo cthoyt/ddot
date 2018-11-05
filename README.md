@@ -1,4 +1,4 @@
-# The Data-Driven Ontology Toolkit (DDOT)
+# The Data-Driven Ontology Toolkit (DDOT) [![Build Status](https://travis-ci.com/cthoyt/ddot.svg?branch=master)](https://travis-ci.com/cthoyt/ddot)
 
 The Data-Driven Ontology Toolkit (DDOT) facilitates the inference, analysis, and visualization of biological hierarchies using a data structure called an ontology. 
 
